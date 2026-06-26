@@ -12,7 +12,7 @@ capture-prompt.md pushes reviews to this repo from whatever repo a task ran in (
 
 - Trigger: GitHub -> "Push to branch" -> branch main -> repo JamesAtReklaim/prompt-review
 - Repository: JamesAtReklaim/prompt-review @ main
-- Tools: GitHub MCP + Open Pull Request (+ optional Memories)
+- Tools: none are required to open the PR — cloud agents create branches and open PRs natively. (Optionally keep the GitHub MCP, which is read-only here, and Memories. The agent reads reviews/prompts from its own repo checkout.)
 - Permission scope: Private (runs as my GitHub account, billed to me, private to me)
 - Prompt: paste the contents of prompts/_improver/prompt.md
 - Save -> "Run now" once with a sample review in reviews/ to test.
@@ -28,7 +28,7 @@ capture-prompt.md pushes reviews to this repo from whatever repo a task ran in (
 
 There are two separate GitHub identities in play, and that's fine:
 
-- The Improver automation runs at Private scope as my GitHub account (billed to me, private to me). It opens its advisory PR via the native Open Pull Request tool — it never pushes to main, and it only reads via the GitHub MCP (read access is enough).
+- The Improver automation runs at Private scope as my GitHub account (billed to me, private to me). It opens its advisory PR using the cloud agent's built-in branch/PR creation (write comes from the automation's own token, not the MCP) — it never pushes to main, and it only ever reads via the GitHub MCP (read access is enough).
 - Reviews are pushed by capture-prompt.md using the repo-scoped PROMPT_REVIEW_PAT, so they land as me regardless of what the shared team GitHub MCP is authenticated as.
 
 Do NOT promote the automation to Team Owned — that switches it to the shared cursor service account. And do NOT rely on the shared team GitHub MCP for writes to this repo; use PROMPT_REVIEW_PAT.
