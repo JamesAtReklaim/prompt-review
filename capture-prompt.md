@@ -20,7 +20,7 @@ prompts_used:
 ## Suggested improvements
 - [ ]
 
-Attribute every friction to a prompt id in [brackets]. A clean run is still useful — record it with "none" under frictions.
+Attribute every friction to a prompt id in [brackets]. Only capture a review when the task actually surfaced a friction worth improving — if the run was clean with nothing to improve, don't write a review (we don't record clean runs).
 
 Push it to prompt-review/main using the repo-scoped PAT — NOT the GitHub MCP. (The shared team GitHub MCP authenticates as a different account and is read-only on this repo, so MCP pushes fail.) The token is provided as the cloud-agent secret PROMPT_REVIEW_PAT (a fine-grained token scoped to this repo with Contents: read/write), injected as an env var.
 
