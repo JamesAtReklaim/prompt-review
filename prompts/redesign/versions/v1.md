@@ -1,0 +1,391 @@
+---
+id: redesign
+version: 1
+updated: 2026-06-26
+---
+
+# [PROMPT: redesign v1]
+<!-- Identifying tag — keep this line. The capture/review step scans for
+     "[PROMPT: <id> v<n>]" to know which prompt + version a task used.
+     When this prompt is improved, bump BOTH the frontmatter `version` and the
+     v<n> in the line above, together. -->
+
+# Redesign Task
+
+TASK_ID: <REK-XXXX>
+
+You are working on the redesign task identified by TASK_ID above. Follow the
+phases below in order. Do NOT skip the planning/confirmation gate, and do NOT
+merge anything to main.
+
+---
+
+## Non-negotiables (read first, then follow the phases)
+
+- Branch off fresh `origin/main`, work on `cursor/<id>-<name>`, set the Linear
+  task → In Progress, and `git push -u` the branch (publishing ≠ merging).
+  NEVER merge to main or open/merge a PR unless explicitly asked.
+- Keep the branch merge-clean with `main`. Fetch + merge `origin/main` before
+  each push and whenever `main` advances; resolve conflicts immediately (if main
+  already shipped something you also added — e.g. a shared component — adopt
+  main's version and drop your duplicate). A branch left conflicting with `main`
+  becomes a `mergeable_state: dirty` PR later, and GitHub then can't build the
+  `refs/pull/<N>/merge` commit — so the PR's CI/E2E/Copilot silently never run
+  (looks like an infra/permissions problem but isn't).
+- If the task relies on a resource you cannot actually open (mockup/Figma/doc/
+  dataset/credentials), REQUEST IT FIRST and build nothing that depends on it.
+  Do not proceed on assumptions.
+- If a feature needs a backend mechanism or data that does not exist, do NOT
+  fake it with a placeholder/estimate — SKIP that feature, build the rest, and
+  raise it for an executive decision.
+- Visual LAYOUT → the mockup is the authority; never infer layout from a text
+  spec when a mockup exists. COPY that claims how the product behaves → must be
+  truthful to the actual contract even if the mockup's wording isn't (flag it).
+- Colors/spacing → semantic theme tokens only; approved primitives only.
+- "Done" for a redesign = the real screen verified live as a VISUAL DIFF vs the
+  reference (desktop + mobile, clean console), not just a green build.
+
+---
+
+## Phase 0 — Branch setup & task status (do this first)
+
+- Fetch the latest base branch (e.g. `git fetch origin main`) so your work
+  branches off an up-to-date base — not a stale tree.
+- Create a new local branch off that fresh base. Do NOT work on main.
+- Branch naming: lowercase, prefixed `cursor/`, include the task id, e.g.
+  `cursor/rek-____-<short-descriptive-name>`.
+- Set the Linear task to "In Progress" as soon as you pick it up (move it
+  from Backlog/Todo → In Progress via the Linear MCP). If it is already In
+  Progress / Code Review / QA / further along, leave it.
+- Publish the branch to the remote with `git push -u origin <branch>` as
+  soon as you have your first commit, and keep pushing as you go. This is
+  REQUIRED: the user always checks the work on Cursor Desktop, so the branch
+  must be available remotely. Publishing the branch is NOT merging — do NOT
+  merge to main, and do NOT open or merge a PR unless explicitly asked.
+- Keep the branch in sync with `main` as it advances: periodically (and before
+  any push) `git fetch origin main && git merge origin/main`, resolving
+  conflicts right away. Don't let drift accumulate — a stale branch silently
+  breaks the eventual PR's CI (see Non-negotiables).
+- Do all subsequent work on this branch.
+
+## Phase 1 — Investigation (read-only, make no changes yet)
+
+1. Read and fully understand the task:
+   - Fetch the Linear issue (description, comments, acceptance criteria,
+     attachments, linked designs/Figma/screenshots).
+
+2. RESOURCE ACCESS GATE — run this FIRST, before any planning or implementation:
+   - List every resource the task clearly relies on to be done correctly:
+     design/mockup/screenshot, Figma, a linked doc or spec, a dataset/sample
+     file, credentials, an external API, etc.
+   - For each, confirm you can ACTUALLY open and read it — not merely that it is
+     referenced, and not just its metadata. For an image (Slack/Figma/
+     attachment), that means actually VIEWING the image; a connected MCP that
+     returns only message text or file metadata does NOT count as access.
+   - If a clearly-required resource is inaccessible: request it from the user
+     immediately, as your first priority, and do NOT build anything (or make any
+     visual/layout/implementation decision) that depends on it. Do not infer it,
+     work around it, or proceed on assumptions — the user would much rather hand
+     it to you up front than have you redo work later. This OVERRIDES the
+     autonomous "you MAY proceed" clause below for anything depending on it.
+     - You MAY, in parallel, continue read-only investigation that does NOT
+       depend on the missing resource (reading the issue, docs, code; tracing
+       data sources) so your eventual request is well-informed — but stop short
+       of any build or visual decision.
+     - In a no-human / cloud run you cannot get a live answer: consolidate
+       everything into ONE clear request and END THE TURN. Ending the turn to
+       obtain a required resource is the correct, successful outcome — not a
+       failure. Leave dependent work explicitly unbuilt, marked "blocked —
+       awaiting <resource>".
+   - Only continue past this gate without a resource if it is genuinely
+     optional/nice-to-have — note that and proceed.
+
+3. Establish the DESIGN REFERENCE (this decides how you'll judge fidelity):
+   - Determine whether a visual design exists (mockup, screenshot, Figma).
+   - If a design EXISTS → it is your fidelity reference, and per the Resource
+     Access Gate above you must already be able to actually view it (if you
+     can't, you've already stopped and asked for it). A text spec enumerates
+     content/fields, NOT layout or hierarchy — never infer the visual structure
+     from text when a real mockup exists.
+   - If NO design exists → you may use your judgment, but the result MUST
+     (a) satisfy the written spec exactly, and (b) match the existing design
+     language. Do NOT invent a new visual style. Pick the 1–2 closest sibling
+     components and mirror their layout/spacing/treatment, reusing the same
+     primitives + theme tokens + patterns. Consistency with the app IS the
+     design here. Surface notable layout/visual choices as assumptions (the bar
+     for surfacing is lower with no design — a reasonable PM is more likely to
+     disagree).
+   - Either way, record every visual decision you had to infer (layout
+     structure, which token maps to "accent/yellow", spacing, elements the
+     text/design doesn't pin down) as an approximation to confirm in Phase 3.
+     Do not silently invent pixel values OR layout structure.
+
+4. Understand the rules and conventions — read these specifically (don't just
+   "look around"):
+   - .cursor/rules/*, AGENTS.md / CLAUDE.md, and always-applied rules.
+   - docs/context/CONVENTIONS.md — especially "Styling Conventions / Design
+     Tokens" ("Never use raw color values — always reference tokens").
+   - .cursor/rules/brand-guidelines.mdc — brand palette, typography, voice.
+   - .cursor/rules/shadcn-migration.mdc — shadcn primitives only, the 6
+     portability rules, locked package versions.
+   - The theme token source (src/styles/reklaim-theme.css +
+     src/styles/reklaim-tailwind.preset.ts; src/index.css + tailwind.config.ts
+     wire them up) — enumerate the available semantic tokens (--primary,
+     --success, --muted-foreground, etc.) so every color choice maps to a token
+     from the start.
+   - The relevant feature spec(s) (start at docs/context/INDEX.md) for every
+     feature this redesign touches.
+
+5. Understand the existing design language by inspecting the components/pages
+   you'll change AND 1–2 sibling components (naming, layout, tokens, spacing,
+   primitives). Match the established system — do not invent a new style.
+
+6. Identify the exact files/components involved and how they're wired
+   (hooks, data flow, routes).
+
+7. Trace data sources, check for missing backend, and check copy truthfulness:
+   - For every dynamic value the redesign touches, trace it to its data source
+     (hook → query → table/config). Note which numbers are live per-user data,
+     which are static copy.
+   - COPY-TRUTH RULE: where the mockup's copy makes a claim about how the
+     product BEHAVES that isn't true of the actual implementation (e.g.
+     "+1 entry per survey" when surveys actually award points, and entries come
+     only from pledging), write copy that is TRUTHFUL to the real contract — do
+     NOT reproduce misleading wording just because it's in the mockup — and flag
+     the deviation for sign-off. (Visual layout still follows the mockup; this
+     carve-out is for factual/behavioral copy only.)
+   - MISSING-BACKEND RULE: if a requested element/feature depends on a backend
+     mechanism, table, column, RPC, or data source that does NOT exist, do NOT
+     implement a placeholder, heuristic, or fabricated/estimated stand-in for it
+     (e.g. a "top N% of entrants" badge when there is no per-entrant ranking
+     data). Mark it "blocked — missing backend", EXCLUDE it from this task, build
+     everything else, and raise it for an executive decision at the confirmation
+     gate and final report (build the backend as a separate task vs drop the
+     feature). Do NOT add the missing backend yourself unless the task
+     explicitly includes backend work or the user approves it. A half-measure
+     here is the wrong choice — skip-and-surface beats fabricate.
+
+8. Explicitly classify the requested elements into: (a) mine to build,
+   (b) already shipped by a sibling/dependency task (give the issue id +
+   status), (c) belongs to a sibling task and is out of scope here, (d) blocked
+   — requires backend/data that doesn't exist (excluded; raised for an executive
+   decision per the Missing-Backend rule). Resolve dependency issue statuses
+   before assuming work is needed. (Sibling redesigns often touch the SAME
+   shared files — e.g. the dashboard sidebar/nav — so expect merge conflicts and
+   check whether a sibling already shipped a piece you were about to build.)
+
+> This repo has extensive docs/specs (feature specs, INDEX.md, data model,
+> edge-function docs, architecture, .cursor/rules/*, skills). Treat them as your
+> first source of truth and search them before adding to the questions list.
+
+## Phase 2 — Planning
+
+1. List the files to edit/add and the concrete change in each. Keep the diff
+   minimal and consistent with existing conventions. No drive-by refactors —
+   EXCEPT that matching the mockup wins over minimal-diff: replacing components
+   and removing sections not shown in the mockup is expected, not a refactor to
+   avoid.
+
+2. Produce a table mapping each acceptance criterion / test-plan item from the
+   issue → the specific change that satisfies it → how it will be verified.
+   Carry this table through to Phase 5. For any criterion classified (d) blocked
+   — missing backend, mark it "deferred — missing backend (executive decision)"
+   rather than inventing a stand-in.
+
+3. DESIGN DECOMPOSITION (do this before writing any JSX — it is the stage that
+   prevents "has all the fields but looks wrong"). For each new/changed visual
+   component, write down:
+   - Box structure: the columns/rows, what element sits where, alignment, and
+     what is primary vs secondary (e.g. "icon column | text column | rewards
+     column").
+   - Fit check: does this structure actually fit the target grid/width and
+     surrounding layout (sidebars, etc.)? Choose the column count / breakpoints
+     accordingly — a layout that needs width must not be forced into a too-narrow
+     grid.
+   - Token map: every color/spacing decision names a semantic theme token
+     (e.g. points → brand token, success green → --success, bg-card,
+     text-muted-foreground) OR is explicitly justified as "no token exists"
+     (e.g. multi-hue category icons).
+   - Responsive reflow: how it collapses on tablet/mobile.
+   - Validate the decomposition against the design reference: if a mockup
+     exists, diff your structure against it; if not, confirm it mirrors the
+     cited sibling component(s) and satisfies the spec. List any deviation.
+
+4. Split every open question into two buckets and handle them differently:
+   - Doc-answerable facts → answer them yourself from the docs/code and
+     state the answer.
+   - Product / UX / semantic / visual judgment calls (copy that may mislead,
+     removing existing sections, adapting a layout the shell doesn't support,
+     brand-color choices, any layout/visual decision you inferred, any feature
+     dropped under the Missing-Backend rule, any copy changed under the
+     Copy-Truth rule) → list these explicitly as decisions requiring human
+     sign-off. Do NOT bury them as silent assumptions. The bar for surfacing is
+     "a reasonable PM might disagree," not "the docs are silent."
+
+5. Decide how to verify. Prefer LOCAL verification:
+   - Automated checks you'll run (lint, type-check, unit/component tests, build).
+   - Confirm each automated check actually exercises the files you changed. If a
+     check passes suspiciously fast or uses a config that may not include your
+     files (e.g. a root `tsc --noEmit` that's a project-references no-op), run a
+     check that genuinely compiles your changes and say which one you trusted.
+   - A live run of the actual changed screen — see Phase 4 step 4.
+   - The exact manual checks the user should perform (routes/screens, what to
+     look for, viewports incl. mobile).
+
+## Phase 3 — Confirmation gate (report before editing)
+
+- If you still have blocking questions or product/UX/visual judgment calls after
+  consulting docs, raise them now. Batch ALL of them into this single report —
+  do not dribble questions out across multiple turns.
+- Resolve the stop-vs-proceed decision explicitly:
+  - If a human is available to respond: STOP and WAIT for their answer before
+    writing any code.
+  - If this is an autonomous/cloud run with no human in the loop: you MAY
+    proceed, but you MUST explicitly tag every unconfirmed judgment call as an
+    assumption in your report, and revisit it the moment feedback arrives.
+    (Exception: a missing REQUIRED resource is NOT an assumption to proceed on —
+    per the Phase 1 Resource Access Gate, request it, leave dependent work
+    unbuilt, and it's fine to end the turn on the request.)
+  - For VISUAL fidelity specifically, bias toward stopping to obtain the mockup
+    over proceeding on assumption — visual inference is cheap to get wrong and
+    expensive to redo.
+- Post a BRIEF, high-level summary covering:
+  1. The problem (what the redesign is and why).
+  2. The changes you intend to make + the scope map (mine / already-done /
+     out-of-scope / blocked-missing-backend) from Phase 1.
+  3. The acceptance-criteria map from Phase 2.
+  4. The design decomposition (layout structure + token map) and how it maps to
+     the design reference (mockup) or, if none, the sibling component(s) you're
+     matching.
+  5. The list of product/UX/visual judgment calls and what you decided (or are
+     asking) — INCLUDING any feature skipped under the Missing-Backend rule and
+     any copy changed under the Copy-Truth rule, as explicit decisions.
+  6. The testing plan — both the checks you'll run and the manual tests the user
+     must do.
+
+## Phase 4 — Implementation & testing loop
+
+1. Make the planned changes on your branch, following the Phase 2 decomposition
+   (layout structure + token map) and the existing component patterns. Do NOT
+   build any element classified (d) blocked — missing backend.
+
+2. Run your automated checks (lint, type-check that actually compiles your
+   files, unit/component tests, build). Add/update tests where rules require it.
+
+3. Convention self-audit on your diff (catches drift mechanically):
+   - Grep for raw color literals (`-(amber|emerald|rose|sky|indigo|…)-\d`, hex,
+     `rgb(`); for each, confirm no semantic token exists — if one does, use it.
+   - Confirm only approved primitives are used (e.g. @/components/ui/*, no
+     forbidden libraries), the portability rules hold, and file/naming
+     conventions match.
+
+4. Mandatory live verification — this is a VISUAL DIFF, not just "it renders".
+   Load the ACTUAL changed screen in a browser (authenticate if the route
+   requires it) and:
+   - Place the design reference beside the running screen (if a mockup exists)
+     OR the cited sibling component / design system (if none), and enumerate
+     EVERY structural/visual deviation (layout, hierarchy, spacing, color
+     treatment). "Has all the fields" is NOT "matches the design." Fix
+     deviations before considering it done.
+   - Confirm it renders with no error boundary / blank screen.
+   - Confirm the primary interactions you changed actually work (clicks,
+     navigation, copy, share, etc.).
+   - Confirm the responsive/mobile layout (e.g. 375×812) holds.
+   - Confirm the browser console is free of new errors/warnings.
+   - Capture a screenshot (desktop + mobile). A passing test suite does NOT
+     substitute for this — for a redesign, a green build with a crashing or
+     off-design screen is a failure.
+
+5. If anything fails, fix and re-run. Loop until automated checks, the
+   convention self-audit, AND the live visual verification all pass.
+
+6. Before pushing, sync with `main`: `git fetch origin main && git merge
+   origin/main`, resolve any conflicts (re-run the checks afterward), then commit
+   to the branch with clear messages and `git push` after each commit so the
+   user can always pull a current, merge-clean branch into Cursor Desktop. Keep
+   the branch conflict-free with `main` as it advances. Pushing/publishing the
+   branch is required; opening or merging a PR is NOT — do that only when
+   explicitly asked.
+
+## Phase 5 — Final report
+
+Give a BRIEF, high-level report:
+
+- What you changed and how it went.
+- The acceptance-criteria map, now filled in with the verification result for
+  each item (so completeness is auditable, not "trust me").
+- Design-fidelity result: how the final UI maps to the design reference (mockup)
+  or, if none, to the sibling component(s) + spec; note any remaining deviation.
+- Convention check result (tokens / primitives / portability / naming).
+- Result of the checks you ran (and which type-check you actually trusted).
+- Screenshot(s) / result of the live visual verification, incl. mobile.
+- Any product/UX/visual judgment calls you made and which still need sign-off
+  (including copy changed under the Copy-Truth rule).
+- Any features skipped because their required backend/data does not exist —
+  listed for your executive decision (build the backend as a follow-up vs drop
+  the feature). You must NOT have implemented a fabricated stand-in for these.
+- Confirm the branch is published to the remote, merge-clean with `main`, and
+  its name — so the user can open it in Cursor Desktop.
+- The exact manual tests the user should run (commands, routes/screens, what
+  "correct" looks like, viewports). Mention the Cursor Desktop option if useful.
+
+## Phase 6 — Review response (Phase 5 is NOT terminal)
+
+Expect iteration after the report. When the user gives feedback or reports a
+bug:
+
+- Treat it as a mini-loop: re-sync with `main` (`git fetch origin main &&
+  git merge origin/main`, resolve conflicts), reproduce, fix, re-run automated
+  checks AND the live visual verification (Phase 4 step 4), update the
+  acceptance-criteria map, commit and push.
+- Keep ALL hard constraints in force (no merge to main, no PR unless asked).
+- If feedback reopens a product/UX/visual judgment call, re-surface it rather
+  than silently re-deciding.
+
+---
+
+## Hard constraints
+
+- DO NOT merge to main.
+- DO publish your work branch to the remote (`git push -u origin <branch>`) so
+  it is available in Cursor Desktop — this is required, and pushing the branch
+  is explicitly NOT a violation of the no-merge rule.
+- KEEP THE BRANCH MERGE-CLEAN WITH `main`: fetch + merge `origin/main` before
+  each push and whenever main advances, resolving conflicts immediately. A
+  conflicted branch becomes a `dirty` PR whose CI/E2E/Copilot silently never run
+  (GitHub can't build the merge ref) — so never hand off a branch that conflicts
+  with main. When resolving, if main already shipped a piece you also added,
+  adopt main's and drop the duplicate.
+- DO NOT open or merge a PR unless explicitly asked.
+- Set the Linear task to "In Progress" when you start (and leave later statuses
+  alone).
+- RESOURCE ACCESS: if the task clearly relies on a resource you cannot actually
+  access (design image, Figma, linked doc, dataset, credentials), STOP and
+  request it from the user before doing dependent work — do not proceed on
+  assumptions or work around it. (A connected MCP that only returns text/
+  metadata does not count as being able to open an image.) In a cloud run,
+  ending the turn on that request is the correct outcome.
+- MISSING BACKEND: never ship a fabricated, heuristic, or placeholder stand-in
+  for a feature whose required backend mechanism or data source does not exist.
+  Skip that feature, build the rest, and raise it at the end as an executive
+  decision (build backend as a follow-up vs drop). Do NOT add backend yourself
+  unless the task includes it or the user approves.
+- COPY TRUTH: copy that asserts how the product behaves must be truthful to the
+  actual data/contract, even if that means deviating from the mockup's exact
+  words (flag the deviation). Visual layout still follows the mockup.
+- If a visual design exists, it is the fidelity bar — obtain it before building
+  (stop and ask for the image if you can't open it); never infer layout from
+  text when a mockup exists. If NO design exists, use judgment but match the
+  written spec AND the existing design language (cite the sibling component(s)
+  you mirror) — do not invent a new style.
+- Reference semantic theme tokens, not raw color values; use the approved
+  primitives; follow the portability + naming conventions. Run the convention
+  self-audit before "done".
+- Keep changes scoped to the task; match existing styles and conventions; no
+  drive-by refactors (matching the mockup, incl. removing sections it omits, is
+  in-scope, not a drive-by).
+- Consult the docs/specs first; resolve doc-answerable facts yourself, but
+  surface product/UX/visual judgment calls for sign-off rather than assuming.
+- For a redesign, "done" requires the actual screen verified live as a VISUAL
+  DIFF against the reference (render + primary interactions + mobile + clean
+  console + matches the design/spec), not just green automated checks.
