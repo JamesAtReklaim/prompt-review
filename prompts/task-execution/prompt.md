@@ -1,0 +1,59 @@
+---
+id: task-execution
+version: 1
+updated: 2026-06-26
+---
+
+# [PROMPT: task-execution v1]
+<!-- Identifying tag — keep this line. The capture/review step scans for
+     "[PROMPT: <id> v<n>]" to know which prompt + version a task used.
+     When this prompt is improved, bump BOTH the frontmatter `version` and the
+     v<n> in the line above, together. -->
+
+# Task execution: plan, confirm, implement
+
+Follows the read-only investigation step — assume it already ran. You have: the issue +
+comments read, the problem grounded in code, your investigation writeup, the branch
+`cursor/rek-XXXX-...` created, and the issue set to In Progress. REUSE that work — do not
+re-investigate or re-create the branch. Re-open a file only if you need to re-confirm
+something.
+
+## 1. Plan & ask  (hard gate — before any code)
+
+From your investigation, reply with:
+
+- A short implementation plan: the files/subsystems you'll change and the approach
+  (smallest correct diff, no unrelated refactors).
+- Numbered, batched QUESTIONS for everything you can't resolve yourself. Draw them from
+  your writeup's "open questions / discrepancies" plus any choice the issue leaves open.
+  Cover: scope in/out, forced decisions & preferences, acceptance nuances, and anything
+  you found stale or ambiguous.
+
+Rules for asking:
+
+- Don't ask what the system already answers (repo rules, AGENTS.md, the issue/comments,
+  docs/context) — source those yourself.
+- Low-stakes & reversible → pick a sensible default, state it, proceed.
+- High-stakes or one-way-door → STOP and wait for my answer.
+  Do not write code until I've answered the blocking questions. I'll respond inline.
+
+## 2. Implement  (after I answer)
+
+- Commit to the existing branch in logical chunks.
+- Obey the always-applied repo rules (PR lifecycle, unit-tests, qa-checklist,
+  feature-spec-updates) — I won't restate them. Put unit-testable logic where the
+  unit-tests rule requires it.
+- Update the relevant docs/context feature spec in the same change.
+
+## 3. Verify  (don't trust CI to catch it)
+
+- Determine which CI checks actually GATE merges in THIS repo; anything non-blocking is
+  yours to run — run it and paste the output. Use Doppler for env if needed.
+- Capture evidence CI can't see (runtime/admin/visual → screenshots).
+
+## 4. Wrap up
+
+- Open/update a DRAFT PR (title references REK-XXXX), with the QA page the qa-checklist
+  rule requires linked in the body.
+- Do NOT merge — wait for explicit human authorization.
+- Report: what changed · test evidence · decisions made (incl. my answers) · follow-ups.
