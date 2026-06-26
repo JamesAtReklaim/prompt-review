@@ -1,0 +1,70 @@
+---
+id: opening-investigation
+version: 1
+updated: 2026-06-26
+---
+
+# [PROMPT: opening-investigation v1]
+<!-- Identifying tag — keep this line. The capture/review step scans for
+     "[PROMPT: <id> v<n>]" to know which prompt + version a task used.
+     When this prompt is improved, bump BOTH the frontmatter `version` and the
+     v<n> in the line above, together. -->
+
+# Task kickoff: investigate & explain (NO code changes)
+
+Linear issue: <REK-XXXX or Linear URL>
+
+This is a **read-only investigation step**. Do NOT modify any application code,
+config, migrations, or docs. The only mutation you may make is creating the git
+branch (step 4) and setting the Linear status (step 5).
+
+## What I want from you
+
+1. **Read the Linear issue.**
+   - Fetch it via the Linear MCP `get_issue`.
+   - `get_issue` does NOT return comments — also call `list_comments` for the
+     same issue and read them. They often contain the real context, repro steps,
+     and any SchemaDoctor Blast Radius impact analysis.
+   - If the description references other issues, PRs, Slack threads, Notion
+     pages, or links, read the ones that are necessary to understand the problem.
+     Do not post to or reply to any of them.
+
+2. **Investigate the repo to ground the description in actual code.**
+   - Locate the files, components, hooks, edge functions, DB tables, and
+     migrations the issue is actually about.
+   - Read the relevant feature spec(s) first per the context-loading rule:
+     start at `docs/context/INDEX.md`, then the matching
+     `docs/context/FEATURE_SPECS/<feature>.md`, and `docs/context/DATA_MODEL.md`
+     if the DB is involved.
+   - Compare what the issue *says* against what the code *does today*. Confirm or
+     challenge the described behavior with concrete evidence (file paths + line
+     numbers, function/symbol names).
+
+3. **Report back to me** with a concise but specific writeup:
+   - **Problem (in plain terms):** what the issue is asking for / what's broken.
+   - **Current behavior in code:** how it actually works today, with file:line
+     references so I can verify.
+   - **Root cause / relevant mechanics:** the why, where the relevant logic lives,
+     and any invariants or cross-cutting concerns that matter.
+   - **Discrepancies or open questions:** anything in the issue that doesn't match
+     the code, is ambiguous, or seems already-done/stale.
+   - **Rough shape of a fix (optional, high-level only):** which components/
+     subsystems would need to change and how invasive it'd be. NO implementation.
+   - **Risks / blast radius:** what else this touches.
+
+4. **Create the working branch from `main` (but make no edits).**
+   - `git fetch origin main && git checkout -b cursor/<short-descriptive-name>-<suffix> origin/main`
+   - Use lowercase, include the `REK-XXXX` id in the name so E2E/Linear linkage
+     works (e.g. `cursor/rek-1234-fix-wallet-balance`).
+   - Do not commit anything yet — there are no changes at this step.
+
+5. **Move the Linear issue to `In Progress`** (only if it isn't already started),
+   per the slack-and-linear rule. Do not touch any other status.
+
+## Hard constraints
+
+- No code/config/doc/migration changes. No PR. No commits.
+- Don't guess — if you can't find the relevant code, say so and tell me where you
+  looked.
+- Don't post comments or messages to Linear/Slack/GitHub/Notion.
+- Stop after the writeup and wait for my direction on how to proceed.
