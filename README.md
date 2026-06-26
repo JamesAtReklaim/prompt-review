@@ -5,7 +5,7 @@ A private, self-improving library of my reusable task prompts plus a background 
 ## The loop
 
 - Named, versioned prompts live in prompts/<id>/.
-- At the end of a task I run capture-prompt.md, which writes a review to reviews/ and pushes it.
+- At the end of a task I run capture-prompt.md, which writes a review to reviews/ and pushes it (via a repo-scoped token, PROMPT_REVIEW_PAT — not the shared team MCP).
 - That push triggers the Improver automation (prompts/_improver/prompt.md), which reads new reviews -> checks each friction against the CURRENT prompt version (skips anything already fixed) -> makes the smallest improving edit, bumps the version, snapshots it, updates the changelog -> DELETES the consumed review -> opens ONE advisory PR for me to merge.
 - I review/merge the PR. The agent never merges.
 
@@ -23,3 +23,4 @@ A private, self-improving library of my reusable task prompts plus a background 
 - Advisory only (agent opens PRs; I merge). Append-only versions + changelog.
 - The Improver never edits itself — to change it, I edit prompts/_improver/ by hand.
 - Every edit cites the review + friction that motivated it. Reviews are ephemeral.
+- Reviews are pushed with a repo-scoped personal token (PROMPT_REVIEW_PAT), not the shared team GitHub MCP — so they land as me and the token can only touch this repo.
