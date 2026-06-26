@@ -1,0 +1,190 @@
+---
+id: ship-to-staging
+version: 1
+updated: 2026-06-26
+---
+
+# [PROMPT: ship-to-staging v1]
+<!-- Identifying tag — keep this line. The capture/review step scans for
+     "[PROMPT: <id> v<n>]" to know which prompt + version a task used.
+     When this prompt is improved, bump BOTH the frontmatter `version` and the
+     v<n> in the line above, together. -->
+
+# Ship Current Branch to Staging (Company-Conventional)
+
+Take the branch I'm **currently on** through the company's standard process so
+the change lands on **staging only**. The repo's own docs are the source of
+truth — follow them; if anything here conflicts with them, the docs win.
+
+> SCOPE: This gets the change to **staging** (`beta.reklaimyou.com`) and no
+> further. NEVER deploy to production, NEVER cut/push a release tag or GitHub
+> Release, NEVER set the Linear status to **Done**. Production is a separate,
+> out-of-scope process. The terminal state for this workflow is the change
+> verified on staging with the Linear issue at **Ready to Deploy**.
+
+## Authoritative process (read and follow these; re-read as needed)
+
+- `AGENTS.md` — canonical PR workflow summary + how CI/staging works.
+- `.cursor/rules/pr-lifecycle.mdc` — THE merge state machine (draft → self-review
+  → ready → merge), babysitting cadence, and merge authorization.
+- `.cursor/rules/pr-quality-gate.mdc` — required gates: CI + E2E, Copilot/Bugbot
+  rounds, mandatory preview screenshots (§7b), mobile spot-check.
+- `.cursor/rules/qa-checklist.mdc` — mandatory QA Notion page.
+- `.cursor/rules/unit-tests.mdc` — unit-test gate + missing-test detector.
+- `.cursor/rules/slack-and-linear.mdc` — who owns Linear status transitions.
+- `.cursor/rules/e2e-agentmail-auth.mdc` — staging login flow (OTP via AgentMail).
+- `.cursor/rules/github-mcp.mdc` — use the `user-github` MCP for PR read/write.
+- `.github/workflows/ci.yml` + `.cursor/rules/infrastructure.mdc` — confirm how
+  staging actually deploys before assuming.
+
+## What this task adds on top of the docs
+
+1. **Sync with `main` and resolve conflicts FIRST (precondition).** Before
+   opening the PR, pushing, or relying on any PR check: `git fetch origin main`
+   and merge `origin/main` into your branch (`git merge origin/main`). Resolve
+   every conflict, re-run the local gates, and commit the merge. Re-sync if
+   `main` advances while the PR is open.
+   - **Why this is non-negotiable:** a PR that conflicts with `main` is
+     `mergeable_state: dirty`. GitHub then cannot construct the
+     `refs/pull/<N>/merge` commit, so the `pull_request`-triggered workflows
+     (`CI`, `E2E Tests (PR)`) — and Copilot's review — **silently never start**.
+     Only CodeQL and manual `workflow_dispatch` (which run off the head ref)
+     will run, which looks exactly like a permissions/identity/Actions-disabled
+     problem but is not. Don't get fooled.
+   - When you resolve a conflict, treat it as a real merge decision: if `main`
+     already shipped something your branch also added (e.g. a shared component),
+     adopt main's version and drop your duplicate rather than stacking both.
+
+2. **Staging = merge to `main`.** In this repo there's no separate staging
+   branch: merging the PR to `main` triggers the staging deploy + staging E2E
+   (`beta.reklaimyou.com`). Verify this still holds in `ci.yml`; if the pipeline
+   differs, follow the pipeline and tell me.
+
+3. **Auto-merge to staging by default.** Once all required checks are green AND
+   all review feedback is addressed, merge to `main` (staging) automatically —
+   do NOT wait for an explicit "merge it". STOP and ask first ONLY if a blocking
+   reason exists:
+   - (a) a bug or regression was raised on the change;
+   - (b) a review (Copilot / Bugbot / human) surfaced an unresolved, valid
+     concern;
+   - (c) the change touches risky surfaces — auth, payments, migrations, data
+     deletion / PII, security / RLS — or anything you're not confident in or
+     think may be dangerous;
+   - (d) a required gate is red, or only "passing" via an unexplained/unverified
+     flake.
+     When you pause, say which reason applies and present options. Never
+     `--admin` / force-merge or bypass red checks. (Merging to staging is
+     reversible via revert; production stays a separate, explicitly-authorized
+     step — see Hard stop.)
+
+4. **"Merged" ≠ "on staging."** After merging, watch the post-merge `main` run
+   to completion and confirm the staging deploy job(s) AND staging E2E pass
+   before declaring success.
+
+5. **CI pitfalls not in the docs (avoid them):**
+   - **No PR CI/E2E appearing at all?** Before any other theory, check
+     `gh api repos/<owner>/<repo>/pulls/<N> --jq .mergeable_state`. If it's
+     `dirty` (conflict) — or the head is behind a protected base that requires
+     up-to-date — that's the cause: there's no merge ref for `pull_request`
+     workflows to run on. Resolve by merging `main` (item 1). Do NOT spend time
+     on token/identity, "GitHub App can't trigger workflows", re-open, or
+     Actions-settings theories until mergeability is confirmed clean. (Note: the
+     repo's own merges to `main` still trigger the `push` CI even when this
+     happens, because that path doesn't need a PR merge ref.)
+   - **A green E2E run can still hide a real failure you caused.** Playwright
+     retries mean a test that fails on attempt 1 but passes on retry is "flaky"
+     and the run still concludes success — yet a Linear "❌ E2E Tests failed"
+     notice is posted mid-run. If your change renamed/removed any UI text,
+     locator target, route, or testid, grep the E2E suite (`e2e/`) for the old
+     string and update the page objects/specs in the SAME PR. After CI, open the
+     run log and confirm there are `0 failed` AND `0 flaky` on specs your change
+     touches — don't accept a flaky-green on your own surface.
+   - Don't trust a check that's a no-op — confirm it actually exercised your
+     changed files (e.g. the repo's root `tsc --noEmit` does not; run
+     `tsc -p tsconfig.app.json`).
+   - New/changed tests must not import modules that build the Supabase client at
+     load time (e.g. `useJackpotConfig`, or anything importing
+     `@/integrations/supabase/client`) — passes locally (where `VITE_SUPABASE_URL`
+     is set) but fails CI with `supabaseUrl is required` (the `Unit Tests` job
+     runs without it). Mock the client at the boundary, or keep pure logic in a
+     dependency-free module. Reproduce locally with
+     `env -u VITE_SUPABASE_URL npm run test:coverage`.
+   - Local E2E here can't provision its test user (the auth setup needs the
+     Supabase service-role key, which isn't in the sandbox env) — so E2E is
+     validated in CI, not locally. Babysit the CI E2E instead of assuming.
+   - Programmatic typing into some inputs (OTP, segmented date pickers) is
+     unreliable in headless browsers — use key-presses or a native value-setter
+     + `input` event instead of `fill`/`type`.
+
+## Final deliverable (right after staging is confirmed)
+
+A brief report: PR # + merge SHA, CI + staging-E2E results, anything deferred,
+and a short **"How to test on staging"** section — the exact
+`beta.reklaimyou.com` route(s) (note if login/test-user is needed), 3–6
+concrete things to verify, viewports (desktop + mobile 375×812 if UI), what
+"correct" looks like, and a console-error sweep reminder. Then wait for my
+manual testing.
+
+## Finalisation (only once I confirm my manual staging testing passed and I'm happy)
+
+When I tell you I've tested it on staging and I'm happy:
+
+1. **Post a proof comment on the Linear issue** demonstrating the problem is
+   solved, with evidence appropriate to the change (pick whatever genuinely
+   proves it):
+   - UI changes → screenshots of the **deployed staging** surface (desktop +
+     mobile), authenticated if the surface needs it (OTP via AgentMail — see
+     `.cursor/rules/e2e-agentmail-auth.mdc`).
+   - Backend / logic / data changes → relevant test results, query output,
+     logs, or before/after values.
+   - Label it as staging evidence and call out anything environment-specific.
+   - **Embedding images so they actually RENDER in Linear (do this exactly):**
+     a Linear comment will only display images hosted on Linear's own storage.
+     Do NOT embed `cursor.com/artifacts` URLs, other external URLs, or local
+     file paths — they show "Failed to load the image". For each image:
+     (1) `prepare_attachment_upload` (Linear MCP) with the issue, filename,
+     `image/png`, and the EXACT byte size; (2) immediately `PUT` the raw bytes
+     to the returned signed `uploadRequest.url` with its exact headers (the
+     signed URL expires in ~60s, so upload one file fully — prepare → PUT —
+     before preparing the next); (3) embed the returned `uploads.linear.app`
+     `assetUrl` in the comment markdown as `![alt](assetUrl)`. Linear re-signs
+     these on render, so they persist.
+   - **Verify the comment after posting:** re-fetch it (`list_comments` /
+     `get`) and confirm every image actually renders and every link resolves —
+     a broken proof comment is not proof. (This catches bad embeds before I do.)
+2. **Reconcile every failure/error notice on the issue.** Scan the Linear
+   issue's comments for any CI/test failure or error notices posted during this
+   run (e.g. automated "❌ E2E Tests failed" comments, bot alerts, broken-check
+   notifications). In the proof comment (or a dedicated reply), address EACH
+   one explicitly:
+   - Was it a real problem? If **not**, say why (e.g. unrelated pre-existing
+     flake, a known CI-reporting quirk, a check that concluded green despite a
+     misleading comment) — and cite the authoritative green signal (the run id +
+     its `success` conclusion, ideally `0 failed`/`0 flaky`).
+   - If it **was** real, say how it was resolved (link the fixing commit / PR /
+     spec update) and confirm the fix is green on a later run.
+     Leave no failure notice on the task unexplained — a future reader should be
+     able to see, from the task alone, that every red mark was triaged.
+3. **Set the Linear status to `Ready to Deploy`** — per
+   `.cursor/rules/slack-and-linear.mdc`, that's the verified-on-staging
+   end-state. NEVER set **Done** (production-only, out of scope here). My
+   "I'm happy" sign-off is the explicit instruction that authorizes this
+   otherwise integration-owned transition.
+
+## Hard stop at staging
+
+This workflow finishes at **Ready to Deploy**. Do NOT, under any circumstance
+here: deploy to production, create or push a release tag / GitHub Release,
+run any production deploy pipeline, or move the issue to **Done** — even if I
+seem happy or say "ship it." If I want production, that's a separate request
+and a separate (out-of-scope) process; confirm with me explicitly rather than
+inferring it.
+
+## If blocked
+
+If the safe/conventional path is impossible (checks can't go green for reasons
+outside this change, a blocking reason from item 3 applies, the pipeline doesn't
+match the docs), STOP and raise the blocker with options — don't force it.
+**Before declaring "CI won't run" as a blocker, you MUST first confirm the PR's
+`mergeable_state` is clean** (item 1 / item 5) — a merge conflict is the most
+common cause and is fixable by you, not a blocker.
