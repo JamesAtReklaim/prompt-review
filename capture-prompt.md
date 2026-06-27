@@ -1,6 +1,10 @@
 # Task Review Capture — run at the end of a task
 
-Identify which named prompts were used: scan this task's conversation for tags like [PROMPT: <id> v<n>]. List each unique (id, version); use version unknown if a tag wasn't pasted.
+First, identify which named prompts were used: scan this task's conversation for tags like [PROMPT: <id> v<n>]. List each unique (id, version).
+
+STOP CONDITION — no tagged prompt, no review: if the conversation contains NO [PROMPT: <id> v<n>] tag at all, do NOT write or push a review and do NOT continue. A review only exists to improve a named prompt, so with nothing to attribute there's no point. Say "no tagged prompt found — nothing to review" and stop here.
+
+Only if at least one tag was found, continue. (If a prompt was clearly used but its version wasn't pasted, record it with version: unknown.)
 
 Write the review in this exact shape:
 
