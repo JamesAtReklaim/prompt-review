@@ -1,0 +1,74 @@
+---
+id: staging-finalise
+version: 1
+updated: 2026-06-29
+---
+
+# [PROMPT: staging-finalise v1]
+<!-- Identifying tag — keep this line. The capture/review step scans for
+     "[PROMPT: <id> v<n>]" to know which prompt + version a task used.
+     When this prompt is improved, bump BOTH the frontmatter `version` and the
+     v<n> in the line above, together. -->
+
+# Finalise a Staged Change (post manual-testing sign-off)
+
+Run this ONLY after the change is already verified on staging (via the
+`ship-to-staging` prompt) AND I've told you I've done my manual staging testing
+and I'm happy. This finalises the Linear issue: it makes NO code changes,
+deploys nothing, and merges nothing.
+
+Relevant docs (follow them; if anything here conflicts, the docs win):
+- `.cursor/rules/slack-and-linear.mdc` — who owns Linear status transitions.
+- `.cursor/rules/e2e-agentmail-auth.mdc` — staging login flow (OTP via AgentMail),
+  for capturing authenticated staging screenshots.
+
+> Hard stop: this finishes at the Linear issue set to **Ready to Deploy**.
+> NEVER deploy to production, NEVER cut/push a release tag or GitHub Release,
+> NEVER set the status to **Done** — even if I seem happy or say "ship it."
+> Production is a separate, out-of-scope process; confirm explicitly rather than
+> inferring it. My "I've tested it on staging and I'm happy" sign-off authorises
+> only the **Ready to Deploy** transition.
+
+When I tell you I've tested it on staging and I'm happy:
+
+1. **Post a proof comment on the Linear issue** demonstrating the problem is
+   solved, with evidence appropriate to the change (pick whatever genuinely
+   proves it):
+   - UI changes → screenshots of the **deployed staging** surface (desktop +
+     mobile), authenticated if the surface needs it (OTP via AgentMail — see
+     `.cursor/rules/e2e-agentmail-auth.mdc`).
+   - Backend / logic / data changes → relevant test results, query output,
+     logs, or before/after values.
+   - Label it as staging evidence and call out anything environment-specific.
+   - **Embedding images so they actually RENDER in Linear (do this exactly):**
+     a Linear comment will only display images hosted on Linear's own storage.
+     Do NOT embed `cursor.com/artifacts` URLs, other external URLs, or local
+     file paths — they show "Failed to load the image". For each image:
+     (1) `prepare_attachment_upload` (Linear MCP) with the issue, filename,
+     `image/png`, and the EXACT byte size; (2) immediately `PUT` the raw bytes
+     to the returned signed `uploadRequest.url` with its exact headers (the
+     signed URL expires in ~60s, so upload one file fully — prepare → PUT —
+     before preparing the next); (3) embed the returned `uploads.linear.app`
+     `assetUrl` in the comment markdown as `![alt](assetUrl)`. Linear re-signs
+     these on render, so they persist.
+   - **Verify the comment after posting:** re-fetch it (`list_comments` /
+     `get`) and confirm every image actually renders and every link resolves —
+     a broken proof comment is not proof. (This catches bad embeds before I do.)
+2. **Reconcile every failure/error notice on the issue.** Scan the Linear
+   issue's comments for any CI/test failure or error notices posted during this
+   run (e.g. automated "❌ E2E Tests failed" comments, bot alerts, broken-check
+   notifications). In the proof comment (or a dedicated reply), address EACH
+   one explicitly:
+   - Was it a real problem? If **not**, say why (e.g. unrelated pre-existing
+     flake, a known CI-reporting quirk, a check that concluded green despite a
+     misleading comment) — and cite the authoritative green signal (the run id +
+     its `success` conclusion, ideally `0 failed`/`0 flaky`).
+   - If it **was** real, say how it was resolved (link the fixing commit / PR /
+     spec update) and confirm the fix is green on a later run.
+     Leave no failure notice on the task unexplained — a future reader should be
+     able to see, from the task alone, that every red mark was triaged.
+3. **Set the Linear status to `Ready to Deploy`** — per
+   `.cursor/rules/slack-and-linear.mdc`, that's the verified-on-staging
+   end-state. NEVER set **Done** (production-only, out of scope here). My
+   "I'm happy" sign-off is the explicit instruction that authorizes this
+   otherwise integration-owned transition.
