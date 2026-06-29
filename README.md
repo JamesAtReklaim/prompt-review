@@ -6,8 +6,8 @@ A private, self-improving library of my reusable task prompts plus a background 
 
 - Named, versioned prompts live in prompts/<id>/.
 - At the end of a task I run capture-prompt.md, which writes a review to reviews/ and pushes it (via a repo-scoped token, PROMPT_REVIEW_PAT — not the shared team MCP).
-- That push triggers the Improver automation (prompts/_improver/prompt.md), which reads the unprocessed reviews -> checks each friction against the CURRENT prompt version (skips anything already fixed) -> makes the smallest improving edit, bumps the version, snapshots it, updates the changelog -> opens ONE advisory PR (which also deletes the reviews it consumed) for me to merge.
-- I review/merge the PR. The agent never merges.
+- That push triggers the Improver automation (prompts/_improver/prompt.md), which reads the unprocessed reviews -> checks each friction against the CURRENT prompt version (skips anything already fixed) -> makes the smallest improving edit, bumps the version, snapshots it, updates the changelog, deletes the reviews it consumed -> and commits all of that DIRECTLY to main (via the PROMPT_REVIEW_PAT token).
+- It's fully automated — no PR, no manual merge. The archived versions/ snapshots + changelog are the safety net: any bad auto-edit is a one-line `git revert`.
 
 ## Structure
 
@@ -20,7 +20,7 @@ A private, self-improving library of my reusable task prompts plus a background 
 
 ## Safety rules
 
-- Advisory only (agent opens PRs; I merge). Append-only versions + changelog.
+- Auto-applied: the Improver commits improvements straight to main (no PR/merge). The guardrail is the append-only versions/ archive + changelog — every change is snapshotted and revertable.
 - The Improver never edits itself — to change it, I edit prompts/_improver/ by hand.
 - Every edit cites the review + friction that motivated it. Reviews are ephemeral inputs — consumed reviews are deleted in the improvement PR (kept in git history).
 - Reviews are pushed with a repo-scoped personal token (PROMPT_REVIEW_PAT), not the shared team GitHub MCP — so they land as me and the token can only touch this repo.

@@ -6,29 +6,25 @@ capture-prompt.md pushes reviews to this repo from whatever repo a task ran in (
 
 - On github.com as JamesAtReklaim: Settings -> Developer settings -> Personal access tokens -> Fine-grained tokens. Scope it to ONLY the prompt-review repo, permissions Contents: read/write and Metadata: read.
 - Store it as a USER-scoped Cloud Agent secret named PROMPT_REVIEW_PAT (cursor.com -> Cloud Agents -> Secrets). User scope keeps it out of the shared team config and limits blast radius to this one repo.
-- capture-prompt.md reads PROMPT_REVIEW_PAT from the environment to push the review.
+- BOTH capture-prompt.md AND the Improver automation read PROMPT_REVIEW_PAT from the environment to push to main — so it must be injected into the automation's runs too (see the Improver setup + Identity note below).
 
 ## Create the Improver automation (cursor.com/automations -> New Automation)
 
 - Trigger: GitHub -> "Push to branch" -> branch main -> repo JamesAtReklaim/prompt-review
 - Repository: JamesAtReklaim/prompt-review @ main
-- Tools: none are required to open the PR — cloud agents create branches and open PRs natively. (Optionally keep the GitHub MCP, which is read-only here, and Memories. The agent reads reviews/prompts from its own repo checkout.)
-- Permission scope: Private (runs as my GitHub account, billed to me, private to me)
+- Permission scope: Private (runs as my GitHub account) — REQUIRED so the user-scoped PROMPT_REVIEW_PAT secret is injected into the run. The Improver commits directly to main with that token; it does NOT open a PR.
+- Tools: none special. It edits files in its own checkout and pushes to main via PROMPT_REVIEW_PAT. (Optionally keep Memories. The GitHub MCP is not needed — and is read-only here anyway.)
 - Prompt: paste the contents of prompts/_improver/prompt.md
-- Save -> "Run now" once with a sample review in reviews/ to test.
+- Save -> "Run now" once with a sample review in reviews/ to test, then confirm: (a) PROMPT_REVIEW_PAT is present in the run's env, and (b) the improvement commit lands on main directly (no PR).
 
 ## Use it
 
 - Put real prompts into prompts/<id>/prompt.md (keep frontmatter + [PROMPT:] tag).
 - At the end of a task, run capture-prompt.md.
-- Review + merge the Improver's PRs.
+- The Improver applies improvements to main automatically — nothing to merge. Skim the changelog / git history if you want to see what changed; `git revert` any edit you don't like (every version is snapshotted under versions/).
 - To change the Improver, edit prompts/_improver/prompt.md by hand and bump its version, then re-paste it into the automation.
 
 ## Identity note
 
-There are two separate GitHub identities in play, and that's fine:
-
-- The Improver automation runs at Private scope as my GitHub account (billed to me, private to me). It opens its advisory PR using the cloud agent's built-in branch/PR creation (write comes from the automation's own token, not the MCP) — it never pushes to main, and it only ever reads via the GitHub MCP (read access is enough).
-- Reviews are pushed by capture-prompt.md using the repo-scoped PROMPT_REVIEW_PAT, so they land as me regardless of what the shared team GitHub MCP is authenticated as.
-
-Do NOT promote the automation to Team Owned — that switches it to the shared cursor service account. And do NOT rely on the shared team GitHub MCP for writes to this repo; use PROMPT_REVIEW_PAT.
+- The Improver automation must run at **Private scope** as my GitHub account so the **user-scoped PROMPT_REVIEW_PAT secret is injected**. It commits straight to main using that token. (If it were Team Owned, it would run as the shared cursor service account and might not get my user secret — do NOT promote it to Team Owned.)
+- Both capture-prompt.md and the Improver write to main via the same repo-scoped PROMPT_REVIEW_PAT, independent of the shared team GitHub MCP (which is a different account and read-only here). Do NOT rely on the team MCP for writes to this repo.

@@ -1,5 +1,8 @@
 # Changelog — _improver
 
+## v6 — 2026-06-29
+- Switch from advisory-PR to **direct commit to main**: the Improver now writes its edits + version snapshots + changelog + review deletions in one commit and pushes straight to main via PROMPT_REVIEW_PAT — no PR, no human merge. The archived versions/ snapshots are the safety net (revert any bad edit). Removed all PR/merge machinery and the open-PR dedup (no PRs to dedup). Added push-race handling (fetch + rebase before push; on rejection or rebase conflict, re-read current versions and redo from the latest, never force-push). STEP 0 loop terminator unchanged in spirit: the agent's own push re-triggers the run, which finds reviews consumed and exits. (Manual human edit, requested by James — chose full automation with version archives as the guardrail.)
+
 ## v5 — 2026-06-29
 - Fix the duplicate-PR guard: detect an existing open improvement PR by its TITLE ("prompt improvements — …"), not by an `improve/*` branch glob. The automation platform forces a `cursor/...` branch name, so the old branch-pattern check never matched — the Improver couldn't see its own open PR and opened a colliding second one (which then clashed with a concurrent human edit). Dropped the unachievable `improve/<date>-<slug>` branch instruction (title is the durable identifier). Added guidance to bump from each prompt's CURRENT version on main (not the review's, which may be stale) and re-read before writing, to avoid version-number collisions when edits race. (Manual human edit, requested by James.)
 
