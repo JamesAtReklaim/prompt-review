@@ -1,5 +1,8 @@
 # Changelog — testing-status
 
+## v5 — 2026-06-30
+- Reframed the report's driver around what remains to be PROVEN, not what tests could be run: each candidate test must name the claim it proves, and once a claim is established by any actor / CI gate / cheaper earlier proof it is closed — listed only under "Already run" (B) and DROPPED from section C and every action bucket (D/E/F), not down-graded to optional/redundant (review: 2026-06-30-rek-1689-idor-lockdown.md, friction: "The report is framed around 'what tests can I run' rather than 'what remains to be proven.' It surfaced already-proven / redundant checks as actionable [YOU] items ... v4 added the Lead risk table but did not fix the underlying framing").
+
 ## v4 — 2026-06-30
 - Section F now requires the desktop hand-off prompt to **end by emitting a single paste-able return prompt addressed to the cloud agent** (results table per step, env notes, what it couldn't do), so the human only ferries prompts both ways (review: 2026-06-30-rek-1924-survey-deeplinks.md, friction: "The desktop (section F) hand-off is one-directional ... The human ended up manually translating desktop results back into chat").
 - Section F now tells the desktop agent to **NOT request or block on secrets/keys** — run only what works without them, skip + hand back anything needing keys/human eyes — and requires the cloud agent to **name the [YOU]-manual tests explicitly and up front** before the hand-off (review: 2026-06-30-rek-1924-survey-deeplinks.md, friction: "The desktop agent chased unavailable secrets instead of skipping ... the cloud agent did not pre-declare up front which tests are [YOU]-manual").
