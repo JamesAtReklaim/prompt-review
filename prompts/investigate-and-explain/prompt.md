@@ -1,19 +1,26 @@
 ---
-id: bug-investigation
-version: 2
+id: investigate-and-explain
+version: 3
 updated: 2026-06-30
 ---
 
-# [PROMPT: bug-investigation v2]
+# [PROMPT: investigate-and-explain v3]
 <!-- Identifying tag — keep this line. The capture/review step scans for
      "[PROMPT: <id> v<n>]" to know which prompt + version a task used.
      When this prompt is improved, bump BOTH the frontmatter `version` and the
      v<n> in the line above, together. -->
 
-# Investigation-only task: <LINEAR_ID e.g. REK-1759>
+# Investigate & explain a problem (no-footprint): <LINEAR_ID e.g. REK-1759>
+
+**When to use this:** you need to UNDERSTAND a problem and get plain-language options before
+deciding — with ZERO footprint (no branch, no Linear status change, no code). If you're
+instead ready to START implementing a task, use the `opening-investigation` prompt (it
+grounds the issue in code, then creates the working branch and moves the ticket to In
+Progress).
 
 You are doing a **read-only investigation** of the Linear issue **<LINEAR_ID>**. This is a
-bug investigation. The goal is a correct, deep understanding of the problem — NOT a fix.
+deep, no-footprint investigation — often a bug, but any problem you need to understand
+before acting. The goal is a correct, deep understanding of the problem — NOT a fix.
 
 This task has **two clearly separate aspects**, with two different audiences:
 
